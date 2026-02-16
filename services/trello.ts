@@ -248,7 +248,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     .slice()
     .sort((a, b) => new Date(b.dateLastActivity).getTime() - new Date(a.dateLastActivity).getTime())[0];
 
-  const lastPRMatch = lastPRCard?.desc.match(/Exercício:\s*(.+)\nCarga:\s*([0-9.,]+)\nReps:\s*(\d+)\nData:\s*(\d{4}-\d{2}-\d{2})/);
+  const lastPRMatch = lastPRCard?.desc.match(/Exercício:\s*(.+)\nCarga:\s*([0-9.,]+)\nReps:\s*(\d+)(?:\nSéries:\s*\d+)?\nData:\s*(\d{4}-\d{2}-\d{2})/);
 
   const chart = exercises.flatMap((exercise) =>
     exercise.history.map((entry) => ({

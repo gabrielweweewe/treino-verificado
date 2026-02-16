@@ -7,7 +7,7 @@ import { Flame, Plus, Trophy, Zap } from "lucide-react";
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { EvolutionChart } from "@/components/evolution-chart";
 import { readCache, writeCache } from "@/lib/client-cache";
-import type { DashboardData, ExerciseProgress, WorkoutResult } from "@/lib/types";
+import { volume, type DashboardData, type ExerciseProgress, type WorkoutResult } from "@/lib/types";
 
 const EXERCISES_CACHE_KEY = "tv.exercises";
 const DASHBOARD_CACHE_KEY = "tv.dashboard";
@@ -21,6 +21,7 @@ export function WorkoutApp() {
   const [newExerciseName, setNewExerciseName] = useState("");
   const [load, setLoad] = useState("");
   const [reps, setReps] = useState("");
+  const [sets, setSets] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isPRPulse, setIsPRPulse] = useState(false);
   const [error, setError] = useState("");
@@ -114,6 +115,7 @@ export function WorkoutApp() {
 
     const parsedLoad = Number(load);
     const parsedReps = Number(reps);
+    const parsedSets = Math.max(1, Math.floor(Number(sets)) || 1);
     if (!Number.isFinite(parsedLoad) || !Number.isFinite(parsedReps) || parsedLoad <= 0 || parsedReps <= 0) {
       setError("Informe carga e reps válidas.");
       return;
@@ -131,6 +133,7 @@ export function WorkoutApp() {
           exerciseName: selectedExerciseName,
           load: parsedLoad,
           reps: parsedReps,
+          sets: parsedSets,
         }),
       });
 
@@ -155,6 +158,7 @@ export function WorkoutApp() {
 
       setLoad("");
       setReps("");
+      setSets("");
       await hydrateData();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Erro ao registrar treino.");
@@ -216,10 +220,18 @@ export function WorkoutApp() {
           <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-sm text-slate-300">
             <p className="font-medium text-slate-100">Último treino</p>
             <p>
-              {selectedExercise.lastLoad ?? "-"}kg x {selectedExercise.lastReps ?? "-"} | {selectedExercise.lastDate ?? "-"}
+              {selectedExercise.lastLoad ?? "-"}kg × {selectedExercise.lastReps ?? "-"} reps
+              {selectedExercise.lastSets != null && selectedExercise.lastSets > 0 ? ` × ${selectedExercise.lastSets} séries` : ""}
+              {" · "}
+              {selectedExercise.lastDate ?? "-"}
             </p>
+            {selectedExercise.lastLoad != null && selectedExercise.lastReps != null && (selectedExercise.lastSets ?? 1) > 0 && (
+              <p className="mt-0.5 text-xs text-cyan-300/90">
+                Volume: {volume({ load: selectedExercise.lastLoad, reps: selectedExercise.lastReps, sets: selectedExercise.lastSets ?? 1, date: selectedExercise.lastDate ?? "" }).toLocaleString("pt-BR")} kg
+              </p>
+            )}
             <p className="mt-1 text-xs text-slate-400">
-              PR: {selectedExercise.prLoad ?? "-"}kg x {selectedExercise.prReps ?? "-"}
+              PR: {selectedExercise.prLoad ?? "-"}kg × {selectedExercise.prReps ?? "-"}
             </p>
           </div>
         )}
@@ -227,7 +239,8 @@ export function WorkoutApp() {
 
       <section className="space-y-3 rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
         <h2 className="text-sm font-medium text-slate-300">Registrar treino</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <p className="text-xs text-slate-400">Carga · Reps (média ou 1ª série) · Séries</p>
+        <div className="grid grid-cols-3 gap-2">
           <input
             inputMode="decimal"
             value={load}
@@ -240,6 +253,13 @@ export function WorkoutApp() {
             value={reps}
             onChange={(event) => setReps(event.target.value)}
             placeholder="Reps"
+            className="h-14 rounded-xl border border-slate-700 bg-slate-950 px-3 text-lg outline-none placeholder:text-slate-500 focus:border-cyan-400"
+          />
+          <input
+            inputMode="numeric"
+            value={sets}
+            onChange={(event) => setSets(event.target.value)}
+            placeholder="Séries"
             className="h-14 rounded-xl border border-slate-700 bg-slate-950 px-3 text-lg outline-none placeholder:text-slate-500 focus:border-cyan-400"
           />
         </div>

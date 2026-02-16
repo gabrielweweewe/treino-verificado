@@ -10,13 +10,14 @@ export async function POST(request: Request) {
     const exerciseName = body.exerciseName?.trim();
     const load = Number(body.load);
     const reps = Number(body.reps);
+    const sets = Math.max(1, Math.floor(Number(body.sets)) || 1);
 
     if (!exerciseName || !Number.isFinite(load) || !Number.isFinite(reps)) {
       return NextResponse.json({ message: "Payload inválido para registro de treino." }, { status: 400 });
     }
 
-    if (load <= 0 || reps <= 0) {
-      return NextResponse.json({ message: "Carga e reps devem ser maiores que zero." }, { status: 400 });
+    if (load <= 0 || reps <= 0 || sets <= 0) {
+      return NextResponse.json({ message: "Carga, reps e séries devem ser maiores que zero." }, { status: 400 });
     }
 
     const { lists } = await bootstrapBoard();
@@ -27,10 +28,11 @@ export async function POST(request: Request) {
       exerciseName,
       load,
       reps,
+      sets,
       date,
     });
 
-    const prResult = await checkAndUpdatePR(exerciseCard, lists.prs, workoutCard.id, { load, reps, date });
+    const prResult = await checkAndUpdatePR(exerciseCard, lists.prs, workoutCard.id, { load, reps, sets, date });
 
     const response: WorkoutResult = {
       exercise: prResult.updated,
