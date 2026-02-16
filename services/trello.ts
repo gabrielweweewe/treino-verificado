@@ -250,7 +250,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const lastPRMatch = lastPRCard?.desc.match(/Exercício:\s*(.+)\nCarga:\s*([0-9.,]+)\nReps:\s*(\d+)(?:\nSéries:\s*\d+)?\nData:\s*(\d{4}-\d{2}-\d{2})/);
 
-  const rawChart = exercises.flatMap((exercise) =>
+  const chart = exercises.flatMap((exercise) =>
     exercise.history.map((entry) => ({
       date: entry.date,
       exerciseName: exercise.name,
@@ -259,21 +259,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     }))
   );
 
-  // Um ponto por data: volume total do dia e carga máxima do dia (evolução no tempo, linha sobe quando progride)
-  const byDate = new Map<string, { volume: number; load: number }>();
-  for (const point of rawChart) {
-    const existing = byDate.get(point.date);
-    if (!existing) {
-      byDate.set(point.date, { volume: point.volume, load: point.load });
-    } else {
-      existing.volume += point.volume;
-      existing.load = Math.max(existing.load, point.load);
-    }
-  }
-  const chart = Array.from(byDate.entries())
-    .map(([date, agg]) => ({ date, exerciseName: "Dia", load: agg.load, volume: agg.volume }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-20);
+  chart.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return {
     workoutsThisWeek,
