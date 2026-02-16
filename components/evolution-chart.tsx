@@ -49,9 +49,9 @@ export function EvolutionChart({ data }: EvolutionChartProps) {
             <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
             <Tooltip
               contentStyle={{ backgroundColor: "#020617", border: "1px solid #334155", borderRadius: 12 }}
-              formatter={(value, _name, entry) => [
+              formatter={(value) => [
                 metric === "volume" ? `${Number(value).toLocaleString("pt-BR")} kg` : `${value} kg`,
-                entry.payload.exerciseName,
+                metric === "volume" ? "Volume total do dia" : "Carga máx. do dia",
               ]}
               labelFormatter={(label) => `Data: ${label}`}
             />
