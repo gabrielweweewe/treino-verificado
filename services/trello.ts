@@ -141,14 +141,18 @@ export async function updateExerciseCard(cardId: string, description: string): P
 
 export async function createWorkoutEntry(
   workoutListId: string,
-  input: { exerciseName: string; load: number; reps: number; sets: number; date: string }
+  input: { exerciseName: string; load: number; reps: number; sets: number; date: string; series?: Array<{ load: number; reps: number }> }
 ): Promise<TrelloCard> {
+  const seriesBlock =
+    input.series && input.series.length > 0
+      ? `\nSéries:\n${input.series.map((set, index) => `S${index + 1}: ${set.load}kg x ${set.reps}`).join("\n")}`
+      : "";
   return trelloRequest<TrelloCard>("/cards", {
     method: "POST",
     body: JSON.stringify({
       idList: workoutListId,
       name: `${input.date} - ${input.exerciseName}`,
-      desc: `Exercício: ${input.exerciseName}\nCarga: ${input.load}\nReps: ${input.reps}\nSéries: ${input.sets}\nData: ${input.date}`,
+      desc: `Exercício: ${input.exerciseName}\nCarga: ${input.load}\nReps: ${input.reps}\nSéries: ${input.sets}\nData: ${input.date}${seriesBlock}`,
     }),
   });
 }
@@ -157,11 +161,11 @@ export async function checkAndUpdatePR(
   exerciseCard: TrelloCard,
   prListId: string,
   cardToMoveId: string,
-  workout: { load: number; reps: number; sets: number; date: string }
+  workout: { load: number; reps: number; sets: number; date: string; series?: Array<{ load: number; reps: number }> }
 ): Promise<{ isPR: boolean; updated: ExerciseProgress; deltaLoad: number }> {
   const parsed = parseExerciseDescription(exerciseCard.id, exerciseCard.name, exerciseCard.desc);
   const previousLast = parsed.lastLoad ?? 0;
-  const entry = { date: workout.date, load: workout.load, reps: workout.reps, sets: workout.sets };
+  const entry = { date: workout.date, load: workout.load, reps: workout.reps, sets: workout.sets, series: workout.series };
 
   const updated: ExerciseProgress = {
     ...parsed,
@@ -169,7 +173,7 @@ export async function checkAndUpdatePR(
     lastReps: workout.reps,
     lastSets: workout.sets,
     lastDate: workout.date,
-    history: [entry, ...parsed.history].slice(0, 5),
+    history: [entry, ...parsed.history].slice(0, 12),
   };
 
   const isPR = isPersonalRecord(parsed.prLoad, parsed.prReps, workout.load, workout.reps);
@@ -259,11 +263,20 @@ export async function getDashboardData(): Promise<DashboardData> {
     }))
   );
 
+  const allEntriesThisWeek = exercises.flatMap((exercise) =>
+    exercise.history.filter((entry) => isSameWeek(today, entry.date))
+  );
+
+  const totalSetsThisWeek = allEntriesThisWeek.reduce((sum, entry) => sum + entry.sets, 0);
+  const totalVolumeThisWeek = Number(allEntriesThisWeek.reduce((sum, entry) => sum + volume(entry), 0).toFixed(2));
+
   chart.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return {
     workoutsThisWeek,
     weeklyStreak: calculateWeeklyStreak(parsedWorkoutDates),
+    totalSetsThisWeek,
+    totalVolumeThisWeek,
     lastPR: lastPRMatch
       ? {
           exerciseName: lastPRMatch[1],

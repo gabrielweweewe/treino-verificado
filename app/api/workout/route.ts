@@ -4,13 +4,38 @@ import { todayIso } from "@/lib/date";
 import type { WorkoutPayload, WorkoutResult } from "@/lib/types";
 import { bootstrapBoard, checkAndUpdatePR, createWorkoutEntry, getOrCreateExercise } from "@/services/trello";
 
+function sanitizeSeries(series: WorkoutPayload["series"]): Array<{ load: number; reps: number }> {
+  if (!series || series.length === 0) return [];
+  return series
+    .map((set) => ({
+      load: Number(set.load),
+      reps: Number(set.reps),
+    }))
+    .filter((set) => Number.isFinite(set.load) && Number.isFinite(set.reps) && set.load > 0 && set.reps > 0);
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as WorkoutPayload;
     const exerciseName = body.exerciseName?.trim();
-    const load = Number(body.load);
-    const reps = Number(body.reps);
-    const sets = Math.max(1, Math.floor(Number(body.sets)) || 1);
+    const series = sanitizeSeries(body.series);
+
+    const parsedLoad = Number(body.load);
+    const parsedReps = Number(body.reps);
+    const parsedSets = Math.max(1, Math.floor(Number(body.sets)) || 1);
+
+    const bestSeriesSet =
+      series.length > 0
+        ? series.reduce((best, current) => {
+            if (current.load > best.load) return current;
+            if (current.load === best.load && current.reps > best.reps) return current;
+            return best;
+          })
+        : null;
+
+    const load = bestSeriesSet?.load ?? parsedLoad;
+    const reps = bestSeriesSet?.reps ?? parsedReps;
+    const sets = series.length > 0 ? series.length : parsedSets;
 
     if (!exerciseName || !Number.isFinite(load) || !Number.isFinite(reps)) {
       return NextResponse.json({ message: "Payload inválido para registro de treino." }, { status: 400 });
@@ -30,9 +55,16 @@ export async function POST(request: Request) {
       reps,
       sets,
       date,
+      series: series.length > 0 ? series : undefined,
     });
 
-    const prResult = await checkAndUpdatePR(exerciseCard, lists.prs, workoutCard.id, { load, reps, sets, date });
+    const prResult = await checkAndUpdatePR(exerciseCard, lists.prs, workoutCard.id, {
+      load,
+      reps,
+      sets,
+      date,
+      series: series.length > 0 ? series : undefined,
+    });
 
     const response: WorkoutResult = {
       exercise: prResult.updated,

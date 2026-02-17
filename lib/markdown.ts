@@ -1,4 +1,4 @@
-import type { ExerciseProgress, WorkoutEntry } from "@/lib/types";
+import type { ExerciseProgress, WorkoutEntry, WorkoutSet } from "@/lib/types";
 
 const EMPTY_VALUE = "-";
 
@@ -13,8 +13,44 @@ function parseDateFromLine(content: string): string | null {
   return normalized.length > 0 && normalized !== EMPTY_VALUE ? normalized : null;
 }
 
+function parseSeriesDetail(content: string): WorkoutSet[] {
+  const normalized = content.trim();
+  if (!normalized) return [];
+
+  return normalized
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const match = part.match(/^([0-9]+(?:[.,][0-9]+)?)\s*[xX]\s*([0-9]+)$/);
+      if (!match) return null;
+      return {
+        load: Number(match[1].replace(",", ".")),
+        reps: Number(match[2]),
+      };
+    })
+    .filter((value): value is WorkoutSet => value !== null);
+}
+
+function formatSeriesDetail(series: WorkoutSet[] | undefined): string {
+  if (!series || series.length === 0) return EMPTY_VALUE;
+  return series.map((set) => `${set.load}x${set.reps}`).join("; ");
+}
+
 function parseHistoryLine(line: string): WorkoutEntry | null {
   const trimmed = line.trim().replace(/^-+\s*/, "");
+  const detailMatch = trimmed.match(
+    /^(\d{4}-\d{2}-\d{2})\s*[-|]\s*([0-9]+(?:[.,][0-9]+)?)kg\s*[xX]\s*([0-9]+)\s*[xX]\s*([0-9]+)\s*\|\s*Séries:\s*(.+)$/i
+  );
+  if (detailMatch) {
+    return {
+      date: detailMatch[1],
+      load: Number(detailMatch[2].replace(",", ".")),
+      reps: Number(detailMatch[3]),
+      sets: Number(detailMatch[4]),
+      series: parseSeriesDetail(detailMatch[5]),
+    };
+  }
   const withSets = trimmed.match(
     /^(\d{4}-\d{2}-\d{2})\s*[-|]\s*([0-9]+(?:[.,][0-9]+)?)kg\s*[xX]\s*([0-9]+)\s*[xX]\s*([0-9]+)$/
   );
@@ -40,8 +76,13 @@ function parseHistoryLine(line: string): WorkoutEntry | null {
 
 export function formatExerciseDescription(data: ExerciseProgress): string {
   const historyLines = data.history
-    .slice(0, 5)
-    .map((entry) => `- ${entry.date} - ${entry.load}kg x ${entry.reps} x ${entry.sets}`);
+    .slice(0, 12)
+    .map((entry) => {
+      const seriesDetail = formatSeriesDetail(entry.series);
+      return seriesDetail !== EMPTY_VALUE
+        ? `- ${entry.date} - ${entry.load}kg x ${entry.reps} x ${entry.sets} | Séries: ${seriesDetail}`
+        : `- ${entry.date} - ${entry.load}kg x ${entry.reps} x ${entry.sets}`;
+    });
 
   return [
     "## Último Treino",

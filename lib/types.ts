@@ -25,18 +25,28 @@ export interface WorkoutEntry {
   reps: number;
   sets: number;
   date: string;
+  series?: WorkoutSet[];
+}
+
+export interface WorkoutSet {
+  load: number;
+  reps: number;
 }
 
 /** Volume = carga × reps × séries (kg) */
 export function volume(entry: WorkoutEntry): number {
+  if (entry.series && entry.series.length > 0) {
+    return entry.series.reduce((sum, set) => sum + set.load * set.reps, 0);
+  }
   return entry.load * entry.reps * entry.sets;
 }
 
 export interface WorkoutPayload {
   exerciseName: string;
-  load: number;
-  reps: number;
-  sets: number;
+  load?: number;
+  reps?: number;
+  sets?: number;
+  series?: WorkoutSet[];
 }
 
 export interface WorkoutResult {
@@ -48,6 +58,8 @@ export interface WorkoutResult {
 export interface DashboardData {
   workoutsThisWeek: number;
   weeklyStreak: number;
+  totalSetsThisWeek: number;
+  totalVolumeThisWeek: number;
   lastPR: {
     exerciseName: string;
     load: number;

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Flame, Plus, Trophy, Zap } from "lucide-react";
+import { Flame, Plus, Trophy, X, Zap } from "lucide-react";
 
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { EvolutionChart } from "@/components/evolution-chart";
@@ -12,6 +12,11 @@ import { volume, type DashboardData, type ExerciseProgress, type WorkoutResult }
 const EXERCISES_CACHE_KEY = "tv.exercises";
 const DASHBOARD_CACHE_KEY = "tv.dashboard";
 
+interface SetDraft {
+  load: string;
+  reps: string;
+}
+
 export function WorkoutApp() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -19,9 +24,7 @@ export function WorkoutApp() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [selectedExerciseName, setSelectedExerciseName] = useState("");
   const [newExerciseName, setNewExerciseName] = useState("");
-  const [load, setLoad] = useState("");
-  const [reps, setReps] = useState("");
-  const [sets, setSets] = useState("");
+  const [setDrafts, setSetDrafts] = useState<SetDraft[]>([{ load: "", reps: "" }]);
   const [feedback, setFeedback] = useState("");
   const [isPRPulse, setIsPRPulse] = useState(false);
   const [error, setError] = useState("");
@@ -33,14 +36,18 @@ export function WorkoutApp() {
 
   const progressPercent = useMemo(() => {
     if (!selectedExercise) return 0;
-    if (!load) return 0;
-
-    const currentLoad = Number(load);
+    const currentLoad = Math.max(
+      ...setDrafts.map((draft) => {
+        const parsed = Number(draft.load);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }),
+      0
+    );
     if (!Number.isFinite(currentLoad) || currentLoad <= 0) return 0;
 
     const pr = selectedExercise.prLoad ?? currentLoad;
     return Math.min(100, Math.round((currentLoad / pr) * 100));
-  }, [selectedExercise, load]);
+  }, [selectedExercise, setDrafts]);
 
   async function hydrateData() {
     setLoading(true);
@@ -113,11 +120,12 @@ export function WorkoutApp() {
       return;
     }
 
-    const parsedLoad = Number(load);
-    const parsedReps = Number(reps);
-    const parsedSets = Math.max(1, Math.floor(Number(sets)) || 1);
-    if (!Number.isFinite(parsedLoad) || !Number.isFinite(parsedReps) || parsedLoad <= 0 || parsedReps <= 0) {
-      setError("Informe carga e reps válidas.");
+    const parsedSeries = setDrafts
+      .map((draft) => ({ load: Number(draft.load), reps: Number(draft.reps) }))
+      .filter((set) => Number.isFinite(set.load) && Number.isFinite(set.reps) && set.load > 0 && set.reps > 0);
+
+    if (parsedSeries.length === 0) {
+      setError("Informe ao menos uma série válida (carga e reps maiores que zero).");
       return;
     }
 
@@ -131,9 +139,7 @@ export function WorkoutApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           exerciseName: selectedExerciseName,
-          load: parsedLoad,
-          reps: parsedReps,
-          sets: parsedSets,
+          series: parsedSeries,
         }),
       });
 
@@ -156,9 +162,7 @@ export function WorkoutApp() {
         setFeedback("Treino registrado");
       }
 
-      setLoad("");
-      setReps("");
-      setSets("");
+      setSetDrafts([{ load: "", reps: "" }]);
       await hydrateData();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Erro ao registrar treino.");
@@ -233,35 +237,69 @@ export function WorkoutApp() {
             <p className="mt-1 text-xs text-slate-400">
               PR: {selectedExercise.prLoad ?? "-"}kg × {selectedExercise.prReps ?? "-"}
             </p>
+            {selectedExercise.history[0]?.series && selectedExercise.history[0].series.length > 0 && (
+              <p className="mt-1 text-xs text-slate-400">
+                Última sessão:{" "}
+                {selectedExercise.history[0].series.map((set, index) => `S${index + 1} ${set.load}x${set.reps}`).join(" · ")}
+              </p>
+            )}
           </div>
         )}
       </section>
 
       <section className="space-y-3 rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
         <h2 className="text-sm font-medium text-slate-300">Registrar treino</h2>
-        <p className="text-xs text-slate-400">Carga · Reps (média ou 1ª série) · Séries</p>
-        <div className="grid grid-cols-3 gap-2">
-          <input
-            inputMode="decimal"
-            value={load}
-            onChange={(event) => setLoad(event.target.value)}
-            placeholder="Carga (kg)"
-            className="h-14 rounded-xl border border-slate-700 bg-slate-950 px-3 text-lg outline-none placeholder:text-slate-500 focus:border-cyan-400"
-          />
-          <input
-            inputMode="numeric"
-            value={reps}
-            onChange={(event) => setReps(event.target.value)}
-            placeholder="Reps"
-            className="h-14 rounded-xl border border-slate-700 bg-slate-950 px-3 text-lg outline-none placeholder:text-slate-500 focus:border-cyan-400"
-          />
-          <input
-            inputMode="numeric"
-            value={sets}
-            onChange={(event) => setSets(event.target.value)}
-            placeholder="Séries"
-            className="h-14 rounded-xl border border-slate-700 bg-slate-950 px-3 text-lg outline-none placeholder:text-slate-500 focus:border-cyan-400"
-          />
+        <p className="text-xs text-slate-400">Registre série por série durante o treino.</p>
+        <div className="space-y-2">
+          {setDrafts.map((draft, index) => (
+            <div key={`set-${index}`} className="grid grid-cols-[44px_1fr_1fr_38px] gap-2">
+              <div className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-xs text-slate-400">
+                S{index + 1}
+              </div>
+              <input
+                inputMode="decimal"
+                value={draft.load}
+                onChange={(event) => {
+                  const next = [...setDrafts];
+                  next[index] = { ...next[index], load: event.target.value };
+                  setSetDrafts(next);
+                }}
+                placeholder="Carga (kg)"
+                className="h-12 rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              />
+              <input
+                inputMode="numeric"
+                value={draft.reps}
+                onChange={(event) => {
+                  const next = [...setDrafts];
+                  next[index] = { ...next[index], reps: event.target.value };
+                  setSetDrafts(next);
+                }}
+                placeholder="Reps"
+                className="h-12 rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (setDrafts.length === 1) return;
+                  setSetDrafts(setDrafts.filter((_, setIndex) => setIndex !== index));
+                }}
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-slate-400 disabled:opacity-40"
+                disabled={setDrafts.length === 1}
+                aria-label={`Remover série ${index + 1}`}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setSetDrafts((previous) => [...previous, { load: "", reps: "" }])}
+            className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-slate-700 bg-slate-900 px-3 text-xs text-slate-300"
+          >
+            <Plus size={14} />
+            Adicionar série
+          </button>
         </div>
 
         <div className="space-y-2">
@@ -314,6 +352,8 @@ export function WorkoutApp() {
             <div className="grid grid-cols-2 gap-2">
               <InfoCard label="Treinos/semana" value={String(dashboard?.workoutsThisWeek ?? 0)} />
               <InfoCard label="Streak semanal" value={`${dashboard?.weeklyStreak ?? 0} sem`} />
+              <InfoCard label="Séries/semana" value={String(dashboard?.totalSetsThisWeek ?? 0)} />
+              <InfoCard label="Volume/semana" value={`${Math.round(dashboard?.totalVolumeThisWeek ?? 0).toLocaleString("pt-BR")} kg`} />
               <InfoCard
                 label="Último PR"
                 value={dashboard?.lastPR ? `${dashboard.lastPR.load}kg x ${dashboard.lastPR.reps}` : "-"}
