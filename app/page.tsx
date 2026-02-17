@@ -1,5 +1,5 @@
-import { WorkoutApp } from "@/components/workout-app";
+import { AuthGuard } from "@/components/auth-guard";
 
 export default function HomePage() {
-  return <WorkoutApp />;
+  return <AuthGuard />;
 }

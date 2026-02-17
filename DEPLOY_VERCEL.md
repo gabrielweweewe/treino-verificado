@@ -25,7 +25,12 @@
 6. Em **Environment Variables** adicione:
    - `TRELLO_API_KEY` = sua API key do Trello
    - `TRELLO_TOKEN` = seu token do Trello
-7. Clique em **Deploy**.
+   - `NEXTAUTH_URL` = URL do app na Vercel (ex.: `https://treino-verificado-xxx.vercel.app`)
+   - `NEXTAUTH_SECRET` = chave secreta longa e aleatória (ex.: gere com `openssl rand -base64 32`)
+   - `GOOGLE_CLIENT_ID` = Client ID do Google OAuth
+   - `GOOGLE_CLIENT_SECRET` = Client Secret do Google OAuth
+7. No [Google Cloud Console](https://console.cloud.google.com/apis/credentials), em **URIs de redirecionamento autorizados** da credencial OAuth, adicione: `https://SEU-DOMINIO.vercel.app/api/auth/callback/google`
+8. Clique em **Deploy**.
 
 ## 4. Deploy pela CLI (alternativa)
 Na pasta do projeto:
@@ -39,7 +44,7 @@ vercel
 - **Project name?** → enter (ou um nome)  
 - **Directory?** → enter  
 
-Depois, no dashboard da Vercel: **Project → Settings → Environment Variables** e adicione `TRELLO_API_KEY` e `TRELLO_TOKEN`. Em seguida: **Deployments → ⋮ no último deploy → Redeploy**.
+Depois, no dashboard da Vercel: **Project → Settings → Environment Variables** e adicione `TRELLO_API_KEY`, `TRELLO_TOKEN`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`. Em seguida: **Deployments → ⋮ no último deploy → Redeploy**.
 
 ## 5. Pronto
 - A URL será algo como: `treino-verificado-xxx.vercel.app`

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/auth-server";
 import { todayIso } from "@/lib/date";
 import type { WorkoutPayload, WorkoutResult } from "@/lib/types";
 import { bootstrapBoard, checkAndUpdatePR, createWorkoutEntry, getOrCreateExercise } from "@/services/trello";
@@ -15,6 +16,9 @@ function sanitizeSeries(series: WorkoutPayload["series"]): Array<{ load: number;
 }
 
 export async function POST(request: Request) {
+  const { response: authResponse } = await requireAuth();
+  if (authResponse) return authResponse;
+
   try {
     const body = (await request.json()) as WorkoutPayload;
     const exerciseName = body.exerciseName?.trim();

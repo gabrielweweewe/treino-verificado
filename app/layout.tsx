@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 
+import { Providers } from "@/components/providers";
+
 import "./globals.css";
 
 const outfit = Outfit({
@@ -30,7 +32,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" className="dark">
-      <body className={outfit.className}>{children}</body>
+      <body className={outfit.className}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Flame, Plus, Trophy, X, Zap } from "lucide-react";
+import { Flame, LogOut, Plus, Trophy, X, Zap } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 import { ConfettiBurst } from "@/components/confetti-burst";
 import { EvolutionChart } from "@/components/evolution-chart";
@@ -174,7 +175,18 @@ export function WorkoutApp() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 bg-slate-950 px-4 pb-10 pt-6 text-slate-100">
       <header className="space-y-1">
-        <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">Treino Verificado</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">Treino Verificado</p>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+            title="Sair"
+          >
+            <LogOut size={14} />
+            Sair
+          </button>
+        </div>
         <h1 className="text-2xl font-semibold">Progressão de Carga</h1>
         <p className="text-sm text-slate-400">Registro rápido durante o treino, com persistência no Trello.</p>
       </header>
@@ -252,8 +264,8 @@ export function WorkoutApp() {
         <p className="text-xs text-slate-400">Registre série por série durante o treino.</p>
         <div className="space-y-2">
           {setDrafts.map((draft, index) => (
-            <div key={`set-${index}`} className="grid grid-cols-[44px_1fr_1fr_38px] gap-2">
-              <div className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-xs text-slate-400">
+            <div key={`set-${index}`} className="grid grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)_38px] gap-2">
+              <div className="inline-flex h-12 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-xs text-slate-400">
                 S{index + 1}
               </div>
               <input
@@ -265,7 +277,7 @@ export function WorkoutApp() {
                   setSetDrafts(next);
                 }}
                 placeholder="Carga (kg)"
-                className="h-12 rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none placeholder:text-slate-500 focus:border-cyan-400"
+                className="min-w-0 h-12 rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none placeholder:text-slate-500 focus:border-cyan-400"
               />
               <input
                 inputMode="numeric"
@@ -276,7 +288,7 @@ export function WorkoutApp() {
                   setSetDrafts(next);
                 }}
                 placeholder="Reps"
-                className="h-12 rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none placeholder:text-slate-500 focus:border-cyan-400"
+                className="min-w-0 h-12 rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none placeholder:text-slate-500 focus:border-cyan-400"
               />
               <button
                 type="button"

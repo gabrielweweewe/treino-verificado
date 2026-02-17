@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { requireAuth } from "@/lib/auth-server";
 import { bootstrapBoard, getOrCreateExercise, listExercises } from "@/services/trello";
 
 export async function GET() {
+  const { response: authResponse } = await requireAuth();
+  if (authResponse) return authResponse;
+
   try {
     const { lists } = await bootstrapBoard();
     const exercises = await listExercises(lists.exercises);
@@ -19,6 +23,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const { response: authResponse } = await requireAuth();
+  if (authResponse) return authResponse;
+
   try {
     const body = (await request.json()) as { exerciseName?: string };
     const exerciseName = body.exerciseName?.trim();
